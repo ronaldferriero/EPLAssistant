@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependencies
+node_modules/
+
+# Temporary files
+*.tmp
+*.log
+
+# Large source files (not needed for website deployment)
+# Knowledge base is already extracted to data/ folder
+Guides/
