@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EPL Assistant</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Enterprise Permitting & Licensing</p>
+          <h1>EPL Assistant</h1>
+          <p class="lead">
+            A guide-backed assistant for Enterprise Permitting & Licensing that can help with setup,
+            user workflows, coordinator tasks, and vendor-specific review processes.
+          </p>
+        </div>
+        <div class="hero-panel">
+          <p class="panel-label">How it answers</p>
+          <ul class="panel-list">
+            <li>Routes by role, topic, and vendor when needed</li>
+            <li>Prefers direct procedural steps from the guides</li>
+            <li>Includes guide links for follow-up research</li>
+          </ul>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="sidebar">
+          <div class="card">
+            <p class="card-label">Suggested Questions</p>
+            <div id="suggestions" class="suggestions"></div>
+          </div>
+        </section>
+
+        <section class="chat-area">
+          <form id="chat-form" class="chat-form">
+            <label class="sr-only" for="question">Ask a question</label>
+            <input
+              id="question"
+              name="question"
+              type="text"
+              placeholder="Ask about EPL setup, user workflows, coordinator tasks, dashboards, permits, licenses, or review steps"
+              autocomplete="off"
+            />
+            <button type="submit">Ask</button>
+          </form>
+          <div id="chat-log" class="chat-log" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./data/knowledge-base.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
