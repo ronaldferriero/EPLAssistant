@@ -495,7 +495,7 @@ function cleanInstructionText(text) {
     .trim();
 }
 
-function extractInstructionSentences(text, maxSentences = 4) {
+function extractInstructionSentences(text, maxSentences = 8) {
   const cleaned = cleanInstructionText(text);
   const sentences = cleaned.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [cleaned];
   return sentences
@@ -519,7 +519,7 @@ function questionTopicLabel(question) {
   return "your question";
 }
 
-function chunkInstructionItems(chunk, maxItems = 4) {
+function chunkInstructionItems(chunk, maxItems = 8) {
   const directSteps = extractProceduralSteps(chunk.text).slice(0, maxItems);
   if (directSteps.length) {
     return directSteps;
@@ -635,9 +635,9 @@ function bestPracticeItemsForTopic(topic) {
 
 function buildGenericDetailedAnswer(question, chunks) {
   const topic = questionTopicLabel(question);
-  const selected = chunks.slice(0, 3).map((chunk) => ({
+  const selected = chunks.slice(0, 5).map((chunk) => ({
     chunk,
-    items: chunkInstructionItems(chunk, 4),
+    items: chunkInstructionItems(chunk, 8),
   })).map((entry) => ({
     ...entry,
     items: entry.items.filter((item) => {
@@ -648,7 +648,7 @@ function buildGenericDetailedAnswer(question, chunks) {
       if (/^note\b/i.test(cleaned)) {
         return false;
       }
-      if (cleaned.length < 35) {
+      if (cleaned.length < 25) {
         return false;
       }
       return true;
@@ -682,14 +682,14 @@ function buildGenericDetailedAnswer(question, chunks) {
   const prepItems = selected
     .map(({ chunk }) => {
       const text = cleanInstructionText(chunk.text);
-      const firstSentence = extractInstructionSentences(text, 1)[0];
-      if (!firstSentence) {
+      const sentences = extractInstructionSentences(text, 2);
+      if (!sentences.length) {
         return "";
       }
-      return `${firstSentence} Source: ${buildSourceWithLink(chunk.guide_id, chunk.section, chunk.page)}`;
+      return `${sentences.join(' ')} Source: ${buildSourceWithLink(chunk.guide_id, chunk.section, chunk.page)}`;
     })
     .filter(Boolean)
-    .slice(0, 3);
+    .slice(0, 5);
 
   return `
     <p>Here are the detailed step-by-step instructions for ${topic} in EPL. I’m using the most relevant guide sections and turning them into a procedure you can follow in the software.</p>
@@ -706,6 +706,18 @@ function buildGenericDetailedAnswer(question, chunks) {
         `Open the EPL app or setup area mentioned in the steps and confirm each field, tab, or action is available where expected.`,
         `Save the configuration or complete the action, then reopen the record to confirm the change persisted.`,
         `If this affects a case type, work class, workflow, or user-facing process, run one test record to confirm the outcome behaves as expected.`,
+        `Check that all related records (like fees, contacts, workflows) are properly linked and functioning together.`,
+        `Verify user permissions allow access to all necessary screens and actions.`,
+      ])
+    )}
+    ${buildPlaybookSection(
+      "Common Issues & Troubleshooting",
+      buildBulletList([
+        `<strong>Configuration not showing:</strong> Clear browser cache, rebuild cache in System Settings, or recycle app pools if changes don’t appear.`,
+        `<strong>Missing fields or options:</strong> Verify user role permissions include access to the specific module and features.`,
+        `<strong>Changes not saving:</strong> Check for required fields, validation rules, or workflow prerequisites that must be met first.`,
+        `<strong>Integration issues:</strong> Confirm Windows Service tasks are enabled and running, check API credentials, verify network connectivity.`,
+        `<strong>Workflow not triggering:</strong> Validate the workflow template is attached to the correct case type/work class and conditions are met.`,
       ])
     )}
     ${buildPlaybookSection(
@@ -2658,7 +2670,7 @@ function answerQuestion(question) {
     .map((chunk) => ({ chunk, score: scoreChunk(chunk, tokens, question) }))
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
+    .slice(0, 10);
 
   if (!ranked.length) {
     return {
@@ -2675,7 +2687,7 @@ function answerQuestion(question) {
     .filter(Boolean)
     .map((item) => item.chunk)
     .filter((chunk, index, all) => all.findIndex((entry) => entry.id === chunk.id) === index)
-    .slice(0, 3);
+    .slice(0, 6);
 
   return {
     text: buildProceduralGuideAnswer(question, chosen),
