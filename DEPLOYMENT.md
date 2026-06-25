@@ -6,8 +6,11 @@ To enable the website, you need to configure GitHub Pages settings:
 
 1. Go to: https://github.com/ronaldferriero/EPLAssistant/settings/pages
 2. Under "Build and deployment":
-   - Source: **GitHub Actions**
-3. The workflow will automatically deploy on every push to `main`
+   - Source: **Deploy from a branch**
+   - Branch: **main**
+   - Folder: **/docs**
+3. Click **Save**
+4. Wait 1-2 minutes for deployment to complete
 
 ## Website URL
 
