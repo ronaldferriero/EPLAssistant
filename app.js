@@ -264,6 +264,105 @@ function saveAnswerFeedback({ fingerprint, question, vote, answerPreview }) {
   writeAnswerFeedback(entries.slice(0, 250));
 }
 
+function attachCopyButton(messageEl, answerText) {
+  if (!messageEl || messageEl.querySelector(".copy-button")) {
+    return;
+  }
+
+  const copyButton = document.createElement("button");
+  copyButton.className = "copy-button";
+  copyButton.type = "button";
+  copyButton.innerHTML = '<span>📋 Copy</span>';
+  copyButton.setAttribute("aria-label", "Copy answer to clipboard");
+
+  copyButton.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(answerText);
+      copyButton.classList.add("copied");
+      copyButton.innerHTML = '<span>✓ Copied!</span>';
+      setTimeout(() => {
+        copyButton.classList.remove("copied");
+        copyButton.innerHTML = '<span>📋 Copy</span>';
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy:", error);
+    }
+  });
+
+  messageEl.appendChild(copyButton);
+}
+
+function generateFollowUpQuestions(question, answerText) {
+  const lowered = question.toLowerCase();
+  const followUps = [];
+
+  if (/setup|configure|set up/i.test(lowered)) {
+    followUps.push("What are best practices for this setup?");
+    followUps.push("How do I test this configuration?");
+  }
+  if (/bluebeam/i.test(lowered)) {
+    followUps.push("What if a user forgot their Bluebeam password?");
+    followUps.push("How do I manage a review in Bluebeam?");
+  }
+  if (/digeplan/i.test(lowered)) {
+    followUps.push("How do I set up DigEplan SSO?");
+    followUps.push("How do coordinators manage DigEplan reviews?");
+  }
+  if (/review|reviewer/i.test(lowered)) {
+    followUps.push("How do I reassign a review?");
+    followUps.push("How do reviewers add corrections and recommendations?");
+  }
+  if (/coordinator/i.test(lowered)) {
+    followUps.push("How do I work a Review New Files task?");
+    followUps.push("How do I set up Review Coordinator?");
+  }
+  if (/fee/i.test(lowered)) {
+    followUps.push("How do I set up contact types?");
+    followUps.push("How do I manage workflow setup?");
+  }
+
+  if (!followUps.length) {
+    followUps.push("How do I set up fees in EPL?");
+    followUps.push("How do I manage a review?");
+  }
+
+  return followUps.slice(0, 3);
+}
+
+function attachFollowUpQuestions(messageEl, question, answerText) {
+  if (!messageEl || messageEl.querySelector(".follow-up-questions")) {
+    return;
+  }
+
+  const followUps = generateFollowUpQuestions(question, answerText);
+  if (!followUps.length) {
+    return;
+  }
+
+  const container = document.createElement("div");
+  container.className = "follow-up-questions";
+  container.innerHTML = `
+    <div class="follow-up-label">Related Questions</div>
+    <ul class="follow-up-list">
+      ${followUps.map(q => `<li class="follow-up-item" data-question="${q.replace(/"/g, '&quot;')}">${q}</li>`).join('')}
+    </ul>
+  `;
+
+  const items = container.querySelectorAll(".follow-up-item");
+  items.forEach((item) => {
+    item.addEventListener("click", () => {
+      const followUpQuestion = item.getAttribute("data-question");
+      if (followUpQuestion) {
+        questionInput.value = followUpQuestion;
+        questionInput.focus();
+        chatForm.dispatchEvent(new Event("submit"));
+      }
+    });
+  });
+
+  messageEl.appendChild(container);
+}
+
 function attachAnswerFeedback(messageEl, question, answerText) {
   if (!messageEl || messageEl.querySelector(".feedback-controls")) {
     return;
@@ -344,9 +443,9 @@ function addMessage(role, html, options = {}) {
   return wrapper;
 }
 
-function addBotMessage(text, sources = []) {
+function addBotMessage(text, sources = [], question = "") {
   let insertedMessage;
-  const pendingQuestion = state.pendingUserMessage?.innerText?.trim() || "";
+  const pendingQuestion = question || state.pendingUserMessage?.innerText?.trim() || "";
   if (text.trim().startsWith("<")) {
     insertedMessage = addMessage("bot", text, { after: state.pendingUserMessage });
   } else {
@@ -403,6 +502,7 @@ function addBotMessage(text, sources = []) {
   });
 
   attachAnswerFeedback(insertedMessage, pendingQuestion, insertedMessage?.innerText?.trim() || text);
+  attachFollowUpQuestions(insertedMessage, pendingQuestion, insertedMessage?.innerText?.trim() || text);
 }
 
 function addUserMessage(text) {
@@ -2696,16 +2796,60 @@ function answerQuestion(question) {
 }
 
 async function loadKnowledgeBase() {
-  if (window.EREVIEWS_KNOWLEDGE_BASE) {
-    state.kb = window.EREVIEWS_KNOWLEDGE_BASE;
-  } else {
-    const response = await fetch("./data/knowledge-base.json");
-    state.kb = await response.json();
+  const loadingOverlay = document.getElementById("loading-overlay");
+  try {
+    if (window.EREVIEWS_KNOWLEDGE_BASE) {
+      state.kb = window.EREVIEWS_KNOWLEDGE_BASE;
+    } else {
+      const response = await fetch("./data/knowledge-base.json");
+      state.kb = await response.json();
+    }
+    renderSuggestions();
+    addBotMessage(
+      "Ask about EPL setup, user workflows, coordinator tasks, dashboards, permits, licenses, or review steps. If your question is about eReviews and you do not mention Bluebeam or DigEplan, I’ll ask which one you use."
+    );
+  } finally {
+    if (loadingOverlay) {
+      loadingOverlay.classList.add("hidden");
+      setTimeout(() => {
+        loadingOverlay.style.display = "none";
+      }, 300);
+    }
   }
-  renderSuggestions();
-  addBotMessage(
-    "Ask about EPL setup, user workflows, coordinator tasks, dashboards, permits, licenses, or review steps. If your question is about eReviews and you do not mention Bluebeam or DigEplan, I’ll ask which one you use."
-  );
+}
+
+function initializeDarkMode() {
+  const darkModeToggle = document.getElementById("dark-mode-toggle");
+  const savedMode = localStorage.getItem("darkMode");
+
+  if (savedMode === "enabled") {
+    document.body.classList.add("dark-mode");
+  }
+
+  if (darkModeToggle) {
+    darkModeToggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+      const isDark = document.body.classList.contains("dark-mode");
+      localStorage.setItem("darkMode", isDark ? "enabled" : "disabled");
+    });
+  }
+}
+
+function initializeKeyboardShortcuts() {
+  document.addEventListener("keydown", (event) => {
+    // Ctrl+K or Cmd+K to focus input
+    if ((event.ctrlKey || event.metaKey) && event.key === "k") {
+      event.preventDefault();
+      questionInput.focus();
+      questionInput.select();
+    }
+
+    // Escape to clear input
+    if (event.key === "Escape" && document.activeElement === questionInput) {
+      questionInput.value = "";
+      questionInput.blur();
+    }
+  });
 }
 
 chatForm.addEventListener("submit", (event) => {
@@ -2733,8 +2877,18 @@ chatForm.addEventListener("submit", (event) => {
   questionInput.value = "";
 });
 
+initializeDarkMode();
+initializeKeyboardShortcuts();
+
 loadKnowledgeBase().catch((error) => {
   console.error(error);
+  const loadingOverlay = document.getElementById("loading-overlay");
+  if (loadingOverlay) {
+    loadingOverlay.classList.add("hidden");
+    setTimeout(() => {
+      loadingOverlay.style.display = "none";
+    }, 300);
+  }
   addBotMessage(
     "I couldn’t load the guide knowledge base. Rebuild `data/knowledge-base.json` from the PDFs and refresh the page."
   );

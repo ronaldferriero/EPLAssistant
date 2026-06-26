@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading EPL Assistant...</p>
+    </div>
     <div class="shell">
       <header class="hero">
         <div class="hero-copy">
@@ -24,6 +28,10 @@
             <li>Prefers direct procedural steps from the guides</li>
             <li>Includes guide links for follow-up research</li>
           </ul>
+          <button id="dark-mode-toggle" class="dark-mode-toggle" aria-label="Toggle dark mode">
+            <span class="icon-light">☀️</span>
+            <span class="icon-dark">🌙</span>
+          </button>
         </div>
       </header>
 
